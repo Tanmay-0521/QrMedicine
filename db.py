@@ -4,7 +4,7 @@ import sqlite3
 conn = sqlite3.connect('medicine_database.db')
 c = conn.cursor()
 
-# Modify the CREATE TABLE statement to include price_per_quantity column
+# Modify the CREATE TABLE statement to include price_per_quantity and bracket columns
 c.execute('''
     CREATE TABLE IF NOT EXISTS medicines
     (id INTEGER PRIMARY KEY,
@@ -13,7 +13,8 @@ c.execute('''
     expiry_date DATE,
     location TEXT,
     amount_available INTEGER,
-    price_per_quantity REAL)  -- Assuming price is a floating-point number
+    price_per_quantity REAL,
+    bracket TEXT)  -- Assuming bracket is a string identifier
 ''')
 
 # Commit changes and close connection

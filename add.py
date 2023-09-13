@@ -14,7 +14,8 @@ cursor.execute('''CREATE TABLE IF NOT EXISTS medicines
                 expiry_date DATE,
                 location TEXT,
                 amount_available INTEGER,
-                price_per_quantity REAL)''')
+                price_per_quantity REAL,
+                bracket TEXT)''')
 
 # Function to add a new medicine
 def add_medicine():
@@ -24,9 +25,21 @@ def add_medicine():
     location = location_entry.get()
     amount_available = amount_available_entry.get()
     price_per_quantity = price_per_quantity_entry.get()
+    bracket = bracket_entry.get()  
 
-    cursor.execute("INSERT INTO medicines (name, dosage, expiry_date, location, amount_available, price_per_quantity) VALUES (?, ?, ?, ?, ?, ?)",
-                   (name, dosage, expiry_date, location, amount_available, price_per_quantity))
+    # Check if medicine with the same name, dosage, and bracket already exists
+    cursor.execute("SELECT * FROM medicines WHERE name=? AND dosage=? AND bracket=?", (name, dosage, bracket))
+    existing_medicine = cursor.fetchone()
+
+    if existing_medicine:
+        # Update the existing medicine's amount_available
+        new_amount_available = int(existing_medicine[5]) + int(amount_available)
+        cursor.execute("UPDATE medicines SET amount_available=? WHERE id=?", (new_amount_available, existing_medicine[0]))
+    else:
+        # Insert a new entry
+        cursor.execute("INSERT INTO medicines (name, dosage, expiry_date, location, amount_available, price_per_quantity, bracket) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (name, dosage, expiry_date, location, amount_available, price_per_quantity, bracket))
+
     conn.commit()
     messagebox.showinfo("Success", "Medicine added successfully!")
 
@@ -88,7 +101,11 @@ tk.Label(add_frame, text="Price per Quantity").grid(row=5, column=0, sticky="w")
 price_per_quantity_entry = ttk.Entry(add_frame)
 price_per_quantity_entry.grid(row=5, column=1, pady=(0, 10), sticky="w")
 
-ttk.Button(add_frame, text="Add Medicine", command=add_medicine).grid(row=6, columnspan=2)
+tk.Label(add_frame, text="Bracket").grid(row=6, column=0, sticky="w")
+bracket_entry = ttk.Entry(add_frame)
+bracket_entry.grid(row=6, column=1, pady=(0, 10), sticky="w")
+
+ttk.Button(add_frame, text="Add Medicine", command=add_medicine).grid(row=7, columnspan=2)
 
 # Create a frame for deleting medicines
 delete_frame = ttk.LabelFrame(root, text="Delete Medicine")

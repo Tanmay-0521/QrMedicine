@@ -8,6 +8,20 @@ from datetime import datetime
 conn = sqlite3.connect('medicine_database.db')
 cursor = conn.cursor()
 
+# Create medicines table if not exists
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS medicines
+    (id INTEGER PRIMARY KEY,
+    name TEXT,
+    dosage TEXT,
+    expiry_date DATE,
+    location TEXT,
+    amount_available INTEGER,
+    price_per_quantity REAL,
+    bracket TEXT)
+''')
+
+# Function to check medicine availability
 def check_medicine_availability(medication_name, dosage, quantity):
     cursor.execute("SELECT * FROM medicines WHERE name=? AND dosage=?", (medication_name, dosage))
     medicine = cursor.fetchone()
@@ -20,6 +34,7 @@ def check_medicine_availability(medication_name, dosage, quantity):
             return True, medicine
     return False, None
 
+# Function to scan QR code
 def scan_qr_code():
     # Initialize the camera
     cap = cv2.VideoCapture(0)
@@ -75,7 +90,7 @@ if qr_data:
 
         available, medicine = check_medicine_availability(medication_name, dosage, quantity)
         if available:
-            print(f"Medicine Available: {medicine[1]} - Dosage: {medicine[2]} - Amount: {medicine[5]} - Expiry Date: {medicine[3]}")
+            print(f"Medicine Available: {medicine[1]} - Dosage: {medicine[2]} - Amount: {medicine[5]} - Expiry Date: {medicine[3]} - Bracket: {medicine[7]}")
             # Calculate cost and add to total
             price_per_quantity = medicine[6]
             total_cost += int(quantity) * price_per_quantity
@@ -94,4 +109,7 @@ if qr_data:
 if not qr_data:
     print("No QR Code detected.")
 
-print(f"Total Cost of Available Medicine: {total_cost}")
+if total_cost > 0:
+    print(f"Total Cost of Available Medicine: {total_cost}")
+else:
+    print("No medicines available.")
