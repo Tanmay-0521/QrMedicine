@@ -16,7 +16,17 @@ c.execute('''
     price_per_quantity REAL,
     bracket TEXT)  -- Assuming bracket is a string identifier
 ''')
-
+c.execute('''
+    CREATE TABLE IF NOT EXISTS orders
+    (id INTEGER PRIMARY KEY,
+    order_date DATE,
+    patient_name TEXT,
+    doctor_name TEXT,
+    medication_name TEXT,
+    dosage TEXT,
+    quantity_ordered INTEGER,
+    FOREIGN KEY (medication_name, dosage) REFERENCES medicines(name, dosage))
+''')
 # Commit changes and close connection
 conn.commit()
 conn.close()
