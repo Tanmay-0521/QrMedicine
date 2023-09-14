@@ -1,55 +1,36 @@
-# Install required libraries
-# !pip install statsmodels
-
-import pandas as pd
 import sqlite3
-from statsmodels.tsa.statespace.sarimax import SARIMAX
+from datetime import datetime, timedelta
+import pandas as pd
 
 # Create a database connection
 conn = sqlite3.connect('medicine_database.db')
 cursor = conn.cursor()
 
-# Assuming you have a database connection established
+# Calculate the date 30 days ago from today
+end_date = datetime.now()
+start_date = end_date - timedelta(days=1)
 
-# Query the orders table to get historical data
-cursor.execute("SELECT order_date, medication_name, dosage, SUM(quantity_ordered) as total_ordered FROM orders GROUP BY order_date, medication_name, dosage")
+# Query the database for orders and availability in the last 30 days
+cursor.execute("SELECT medicines.name, medicines.dosage, SUM(orders.quantity_ordered) as total_ordered, medicines.amount_available FROM medicines LEFT JOIN orders ON medicines.name = orders.medication_name AND medicines.dosage = orders.dosage AND orders.order_date BETWEEN ? AND ? GROUP BY medicines.name, medicines.dosage",
+               (start_date, end_date))
 order_data = cursor.fetchall()
 
-# Convert the query result into a DataFrame
-df = pd.DataFrame(order_data, columns=["order_date", "medication_name", "dosage", "total_ordered"])
+if not order_data:
+    print("No data available for the last 30 days.")
+else:
+    # Convert the query result into a DataFrame
+    df = pd.DataFrame(order_data, columns=["medicine_name", "dosage", "total_ordered", "amount_available"])
 
-# Prepare data for SARIMA
-df = df.rename(columns={"order_date": "ds", "total_ordered": "y"})
-df['ds'] = pd.to_datetime(df['ds'])
+    # Feature engineering: Calculate a priority score combining total_ordered and availability
+    df["priority_score"] = df["total_ordered"] / (df["amount_available"] + 1)  # Adding 1 to avoid division by zero
 
-# Create a model for each medication and dosage combination
-models = {}
-for name, group in df.groupby(['medication_name', 'dosage']):
-    medication_name, dosage = name
-    model = SARIMAX(group['y'], order=(1, 1, 1), seasonal_order=(1, 1, 1, 12))
-    model_fit = model.fit(disp=False)
+    # Sort the DataFrame by priority_score in descending order
+    df = df.sort_values(by="priority_score", ascending=False)
 
-    # Store the model
-    models[name] = model_fit
+    # Get the most prioritized medicine
+    most_prioritized_medicine = df.iloc[0]
 
-# Generate future dates
-future_dates = pd.date_range(start=df['ds'].max(), periods=10, freq='D')
-
-# Make forecasts for the next 10 days
-forecast_data = []
-for name, model in models.items():
-    medication_name, dosage = name
-    forecast = model.get_forecast(steps=10)
-    forecast_df = forecast.summary_frame()
-    forecast_df['medication_name'] = medication_name
-    forecast_df['dosage'] = dosage
-    forecast_data.append(forecast_df)
-
-# Concatenate the forecasts
-forecast_df = pd.concat(forecast_data)
-
-# Assuming you have a table named 'forecasted_demand' in your database
-forecast_df.to_sql('forecasted_demand', conn, if_exists='replace', index=False)
+    print(f"The most prioritized medicine in the last 30 days is: {most_prioritized_medicine['medicine_name']}")
 
 # Close the database connection
 conn.close()
