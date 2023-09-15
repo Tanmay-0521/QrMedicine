@@ -14,7 +14,7 @@ c.execute('''
     location TEXT,
     amount_available INTEGER,
     price_per_quantity REAL,
-    bracket TEXT)  -- Assuming bracket is a string identifier
+    bracket INTEGER)  -- Assuming bracket is a string identifier
 ''')
 c.execute('''
     CREATE TABLE IF NOT EXISTS orders

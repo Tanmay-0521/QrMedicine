@@ -2,7 +2,6 @@ import sqlite3
 import cv2
 from pyzbar.pyzbar import decode
 import json
-from datetime import datetime
 
 # Connect to the database
 conn = sqlite3.connect('medicine_database.db')
@@ -18,7 +17,7 @@ cursor.execute('''
     location TEXT,
     amount_available INTEGER,
     price_per_quantity REAL,
-    bracket TEXT)
+    bracket INTEGER)
 ''')
 
 # Create orders table if not exists
@@ -39,7 +38,7 @@ def check_medicine_availability(medication_name, dosage, quantity):
     cursor.execute("SELECT * FROM medicines WHERE name=? AND dosage=?", (medication_name, dosage))
     medicine = cursor.fetchone()
     if medicine:
-        expiry_date = datetime.strptime(medicine[3], '%d/%m/%Y').date()
+        expiry_date = medicine[3]  # Assuming expiry_date is in the format 'YYYY-MM-DD'
         if expiry_date >= datetime.now().date() and int(medicine[5]) >= int(quantity):
             new_quantity = int(medicine[5]) - int(quantity)
             cursor.execute("UPDATE medicines SET amount_available=? WHERE id=?", (new_quantity, medicine[0]))
@@ -87,7 +86,7 @@ def process_order(qr_data):
             if medicine is None:
                 print(f"No medicine found for: {medication_name}, Dosage: {dosage}")
             else:
-                expiry_date = datetime.strptime(medicine[3], '%d/%m/%Y').date()
+                expiry_date = medicine[3]  # Assuming expiry_date is in the format 'YYYY-MM-DD'
                 if expiry_date <= datetime.now().date():
                     print(f"Medicine Expired: {medication_name}, Dosage: {dosage}")
                 elif int(medicine[5]) >= int(quantity):
